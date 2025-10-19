@@ -1,57 +1,39 @@
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ShoppingCart } from "lucide-react";
-
 interface ProductCardProps {
-  name: string;
-  description: string;
-  price: number;
-  imageUrl: string;
-  category?: string;
-  sellerName?: string;
+  product: {
+    name: string;
+    description?: string;
+    price: number;
+    image_url?: string;
+    category?: string;
+  };
 }
 
-export const ProductCard = ({
-  name,
-  description,
-  price,
-  imageUrl,
-  category,
-  sellerName,
-}: ProductCardProps) => {
+export const ProductCard = ({ product }: ProductCardProps) => {
   return (
-    <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg border-border">
+    <div className="group relative overflow-hidden rounded-lg border bg-card transition-all hover:shadow-lg">
       <div className="aspect-square overflow-hidden bg-muted">
         <img
-          src={imageUrl || "/placeholder.svg"}
-          alt={name}
-          className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+          src={product.image_url || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e"}
+          alt={product.name}
+          className="h-full w-full object-cover transition-transform group-hover:scale-105"
         />
       </div>
-      <CardContent className="p-4">
-        <div className="space-y-2">
-          {category && (
-            <Badge variant="secondary" className="text-xs">
-              {category}
-            </Badge>
-          )}
-          <h3 className="font-semibold text-lg line-clamp-1">{name}</h3>
-          <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-primary">₦{price.toLocaleString()}</span>
-          </div>
-          {sellerName && (
-            <p className="text-xs text-muted-foreground">by {sellerName}</p>
-          )}
+      <div className="p-4 space-y-2">
+        <h3 className="font-semibold text-base line-clamp-1">{product.name}</h3>
+        <div className="flex items-baseline gap-1">
+          <span className="text-xs text-muted-foreground">#</span>
+          <span className="text-xl font-bold text-foreground">
+            {product.price.toLocaleString()}
+          </span>
         </div>
-      </CardContent>
-      <CardFooter className="p-4 pt-0">
-        <Button className="w-full bg-gradient-to-r from-primary to-secondary">
-          <ShoppingCart className="mr-2 h-4 w-4" />
-          Add to Cart
-        </Button>
-      </CardFooter>
-    </Card>
+        {product.description && (
+          <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
+        )}
+        <button className="w-full bg-primary text-primary-foreground py-2.5 px-4 rounded hover:bg-primary/90 transition-colors text-sm font-medium uppercase flex items-center justify-center gap-2">
+          Add to Cart 
+          <i className="fas fa-shopping-cart"></i>
+        </button>
+      </div>
+    </div>
   );
 };

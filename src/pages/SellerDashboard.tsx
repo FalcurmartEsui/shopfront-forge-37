@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Package, Loader2, Edit, Trash2 } from "lucide-react";
+import { Plus, Package, Loader2, Edit, Trash2, Upload, Image as ImageIcon } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 
 const SellerDashboard = () => {
@@ -20,6 +20,8 @@ const SellerDashboard = () => {
   const [seller, setSeller] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
 
   useEffect(() => {
     checkAuth();
@@ -61,22 +63,55 @@ const SellerDashboard = () => {
     }
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleAddProduct = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitting(true);
 
     const formData = new FormData(e.currentTarget);
-    const productData = {
-      seller_id: seller.id,
-      name: formData.get("name") as string,
-      description: formData.get("description") as string,
-      price: parseFloat(formData.get("price") as string),
-      category: formData.get("category") as string,
-      stock_quantity: parseInt(formData.get("stock_quantity") as string),
-      image_url: formData.get("image_url") as string,
-    };
+    let imageUrl = formData.get("image_url") as string;
 
     try {
+      // Upload image if selected
+      if (selectedImage) {
+        const fileExt = selectedImage.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${seller.id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(filePath, selectedImage);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(filePath);
+
+        imageUrl = publicUrl;
+      }
+
+      const productData = {
+        seller_id: seller.id,
+        name: formData.get("name") as string,
+        description: formData.get("description") as string,
+        price: parseFloat(formData.get("price") as string),
+        category: formData.get("category") as string,
+        stock_quantity: parseInt(formData.get("stock_quantity") as string),
+        image_url: imageUrl,
+      };
+
       const { error } = await supabase.from("products").insert(productData);
 
       if (error) throw error;
@@ -88,6 +123,8 @@ const SellerDashboard = () => {
 
       loadProducts(seller.id);
       setDialogOpen(false);
+      setSelectedImage(null);
+      setImagePreview("");
       e.currentTarget.reset();
     } catch (error: any) {
       toast({
@@ -218,13 +255,61 @@ const SellerDashboard = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="image_url">Image URL</Label>
-                      <Input
-                        id="image_url"
-                        name="image_url"
-                        type="url"
-                        placeholder="https://example.com/image.jpg"
-                      />
+                      <Label htmlFor="image">Product Image</Label>
+                      <div className="flex flex-col gap-4">
+                        {imagePreview ? (
+                          <div className="relative w-full h-48 border rounded-lg overflow-hidden">
+                            <img 
+                              src={imagePreview} 
+                              alt="Preview" 
+                              className="w-full h-full object-cover"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-2 right-2"
+                              onClick={() => {
+                                setSelectedImage(null);
+                                setImagePreview("");
+                              }}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary transition-colors">
+                            <Input
+                              id="image"
+                              name="image"
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageChange}
+                              className="hidden"
+                            />
+                            <label htmlFor="image" className="cursor-pointer flex flex-col items-center gap-2">
+                              <Upload className="h-8 w-8 text-muted-foreground" />
+                              <span className="text-sm text-muted-foreground">
+                                Click to upload product image
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                PNG, JPG up to 10MB
+                              </span>
+                            </label>
+                          </div>
+                        )}
+                        <div className="text-center text-sm text-muted-foreground">- OR -</div>
+                        <div className="space-y-2">
+                          <Label htmlFor="image_url">Enter Image URL</Label>
+                          <Input
+                            id="image_url"
+                            name="image_url"
+                            type="url"
+                            placeholder="https://example.com/image.jpg"
+                            disabled={!!selectedImage}
+                          />
+                        </div>
+                      </div>
                     </div>
                     <Button
                       type="submit"
