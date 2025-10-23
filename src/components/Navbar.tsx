@@ -4,10 +4,13 @@ import { ShoppingCart, Store, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
+import { useCart } from "@/contexts/CartContext";
+import { Badge } from "@/components/ui/badge";
 
 export const Navbar = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { totalItems } = useCart();
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
@@ -43,8 +46,13 @@ export const Navbar = () => {
         </Link>
 
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/cart")} className="relative">
             <ShoppingCart className="h-5 w-5" />
+            {totalItems > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                {totalItems}
+              </Badge>
+            )}
           </Button>
 
           {user ? (

@@ -19,12 +19,42 @@ const SellerDashboard = () => {
   const [submitting, setSubmitting] = useState(false);
   const [seller, setSeller] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
 
   useEffect(() => {
     checkAuth();
+    
+    // Listen for new orders
+    const channel = supabase
+      .channel('orders')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'orders'
+        },
+        (payload) => {
+          // Play notification sound
+          const audio = new Audio('/notification.mp3');
+          audio.play().catch(() => {});
+          toast({
+            title: "🎉 New Order!",
+            description: "Someone just placed an order!",
+          });
+          if (seller) {
+            loadOrders(seller.id);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const checkAuth = async () => {
@@ -48,6 +78,7 @@ const SellerDashboard = () => {
 
     setSeller(sellerData);
     loadProducts(sellerData.id);
+    loadOrders(sellerData.id);
     setLoading(false);
   };
 
@@ -60,6 +91,18 @@ const SellerDashboard = () => {
 
     if (data) {
       setProducts(data);
+    }
+  };
+
+  const loadOrders = async (sellerId: string) => {
+    const { data } = await supabase
+      .from("orders")
+      .select("*, order_items(*)")
+      .eq("seller_id", sellerId)
+      .order("created_at", { ascending: false });
+
+    if (data) {
+      setOrders(data);
     }
   };
 
@@ -186,7 +229,41 @@ const SellerDashboard = () => {
               <div className="text-2xl font-bold">{products.length}</div>
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{orders.length}</div>
+            </CardContent>
+          </Card>
         </div>
+
+        {orders.length > 0 && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Recent Orders</CardTitle>
+              <CardDescription>New orders from customers</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {orders.map((order: any) => (
+                  <div key={order.id} className="border rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="font-semibold">{order.customer_name}</p>
+                        <p className="text-sm text-muted-foreground">{order.customer_email}</p>
+                      </div>
+                      <span className="font-bold text-lg">${order.total_amount}</span>
+                    </div>
+                    <p className="text-sm">{order.shipping_address}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
