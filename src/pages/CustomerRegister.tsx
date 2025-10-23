@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
+import { loginSchema } from "@/lib/validations";
 
 const CustomerRegister = () => {
   const [email, setEmail] = useState("");
@@ -30,6 +31,20 @@ const CustomerRegister = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // Validate input
+    const validation = loginSchema.safeParse({ email, password });
+
+    if (!validation.success) {
+      const firstError = validation.error.issues[0];
+      toast({
+        title: "Validation Error",
+        description: firstError.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
 
     try {
       const { error } = await supabase.auth.signUp({

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { checkoutSchema, type CheckoutFormData } from "@/lib/validations";
 
 const Checkout = () => {
   const { items, totalPrice, clearCart } = useCart();
@@ -55,6 +56,18 @@ const Checkout = () => {
       return;
     }
 
+    // Validate form data
+    const validation = checkoutSchema.safeParse(formData);
+    if (!validation.success) {
+      const firstError = validation.error.issues[0];
+      toast({
+        title: "Validation Error",
+        description: firstError.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -80,10 +93,10 @@ const Checkout = () => {
             user_id: user.id,
             seller_id: sellerId,
             total_amount: orderTotal,
-            customer_name: formData.name,
-            customer_email: formData.email,
-            customer_phone: formData.phone,
-            shipping_address: formData.address,
+            customer_name: validation.data.name,
+            customer_email: validation.data.email,
+            customer_phone: validation.data.phone || null,
+            shipping_address: validation.data.address,
           })
           .select()
           .single();

@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Store, Loader2 } from "lucide-react";
+import { signUpSchema, loginSchema } from "@/lib/validations";
 
 const SellerAuth = () => {
   const navigate = useNavigate();
@@ -37,6 +38,26 @@ const SellerAuth = () => {
     const shopName = formData.get("shopName") as string;
     const phone = formData.get("phone") as string;
     const businessDescription = formData.get("businessDescription") as string;
+
+    // Validate input
+    const validation = signUpSchema.safeParse({
+      email,
+      password,
+      shopName,
+      phone,
+      businessDescription,
+    });
+
+    if (!validation.success) {
+      const firstError = validation.error.issues[0];
+      toast({
+        title: "Validation Error",
+        description: firstError.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -84,6 +105,20 @@ const SellerAuth = () => {
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
+
+    // Validate input
+    const validation = loginSchema.safeParse({ email, password });
+
+    if (!validation.success) {
+      const firstError = validation.error.issues[0];
+      toast({
+        title: "Validation Error",
+        description: firstError.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
 
     try {
       const { error } = await supabase.auth.signInWithPassword({

@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Package, Loader2, Edit, Trash2, Upload, Image as ImageIcon } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
+import { productSchema } from "@/lib/validations";
 
 const SellerDashboard = () => {
   const navigate = useNavigate();
@@ -123,7 +124,33 @@ const SellerDashboard = () => {
     setSubmitting(true);
 
     const formData = new FormData(e.currentTarget);
+    const name = formData.get("name") as string;
+    const description = formData.get("description") as string;
+    const price = parseFloat(formData.get("price") as string);
+    const category = formData.get("category") as string;
+    const stockQuantity = parseInt(formData.get("stock_quantity") as string);
     let imageUrl = formData.get("image_url") as string;
+
+    // Validate product data
+    const validation = productSchema.safeParse({
+      name,
+      description,
+      price,
+      category,
+      stockQuantity,
+      imageUrl: imageUrl || undefined,
+    });
+
+    if (!validation.success) {
+      const firstError = validation.error.issues[0];
+      toast({
+        title: "Validation Error",
+        description: firstError.message,
+        variant: "destructive",
+      });
+      setSubmitting(false);
+      return;
+    }
 
     try {
       // Upload image if selected
@@ -147,11 +174,11 @@ const SellerDashboard = () => {
 
       const productData = {
         seller_id: seller.id,
-        name: formData.get("name") as string,
-        description: formData.get("description") as string,
-        price: parseFloat(formData.get("price") as string),
-        category: formData.get("category") as string,
-        stock_quantity: parseInt(formData.get("stock_quantity") as string),
+        name,
+        description,
+        price,
+        category,
+        stock_quantity: stockQuantity,
         image_url: imageUrl,
       };
 
