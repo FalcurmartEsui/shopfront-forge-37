@@ -1,9 +1,8 @@
 import { Navbar } from "@/components/Navbar";
 import { useCart } from "@/contexts/CartContext";
-import { Button } from "@/components/ui/button";
 import { Trash2, Plus, Minus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import "./Cart.css";
 
 const Cart = () => {
   const { items, removeFromCart, updateQuantity, totalPrice } = useCart();
@@ -11,89 +10,74 @@ const Cart = () => {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="cart-page">
         <Navbar />
-        <div className="container mx-auto px-4 py-16 text-center">
-          <h1 className="text-4xl font-bold mb-4">Your Cart is Empty</h1>
-          <Button onClick={() => navigate("/")}>Continue Shopping</Button>
+        <div className="empty-cart">
+          <h1 className="empty-cart-title">Your Cart is Empty</h1>
+          <button onClick={() => navigate("/")} className="continue-shopping-button">
+            Continue Shopping
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="cart-page">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold mb-8">Shopping Cart</h1>
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-4">
+      <div className="cart-container">
+        <h1 className="cart-title">Shopping Cart</h1>
+        <div className="cart-content">
+          <div className="cart-items">
             {items.map((item) => (
-              <Card key={item.id}>
-                <CardContent className="p-4">
-                  <div className="flex gap-4">
-                    <img
-                      src={item.image_url || "/placeholder.svg"}
-                      alt={item.name}
-                      className="w-24 h-24 object-cover rounded"
-                    />
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg">{item.name}</h3>
-                      <p className="text-primary font-bold">${item.price}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        >
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <span className="w-12 text-center">{item.quantity}</span>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="destructive"
-                          onClick={() => removeFromCart(item.id)}
-                          className="ml-auto"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <div>
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-bold mb-4">Order Summary</h2>
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between">
-                    <span>Subtotal</span>
-                    <span>${totalPrice.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-lg">
-                    <span>Total</span>
-                    <span>${totalPrice.toFixed(2)}</span>
+              <article key={item.id} className="cart-item">
+                <img
+                  src={item.image_url || "/placeholder.svg"}
+                  alt={item.name}
+                  className="cart-item-image"
+                />
+                <div className="cart-item-details">
+                  <h3 className="cart-item-name">{item.name}</h3>
+                  <p className="cart-item-price">${item.price}</p>
+                  <div className="quantity-controls">
+                    <button
+                      className="quantity-button"
+                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                    >
+                      <Minus size={16} />
+                    </button>
+                    <span className="quantity-display">{item.quantity}</span>
+                    <button
+                      className="quantity-button"
+                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    >
+                      <Plus size={16} />
+                    </button>
+                    <button
+                      className="remove-button"
+                      onClick={() => removeFromCart(item.id)}
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
-                <Button
-                  className="w-full"
-                  onClick={() => navigate("/checkout")}
-                >
-                  Proceed to Checkout
-                </Button>
-              </CardContent>
-            </Card>
+              </article>
+            ))}
           </div>
+          <aside className="cart-summary">
+            <h2 className="summary-title">Order Summary</h2>
+            <div className="summary-row">
+              <span>Subtotal</span>
+              <span>${totalPrice.toFixed(2)}</span>
+            </div>
+            <div className="summary-total">
+              <span>Total</span>
+              <span>${totalPrice.toFixed(2)}</span>
+            </div>
+            <button onClick={() => navigate("/checkout")} className="checkout-button">
+              Proceed to Checkout
+            </button>
+          </aside>
         </div>
       </div>
     </div>

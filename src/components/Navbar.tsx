@@ -1,11 +1,10 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { ShoppingCart, Store, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { useCart } from "@/contexts/CartContext";
-import { Badge } from "@/components/ui/badge";
+import "./Navbar.css";
 
 export const Navbar = () => {
   const navigate = useNavigate();
@@ -29,47 +28,39 @@ export const Navbar = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    toast({
-      title: "Logged out successfully",
-    });
+    toast({ title: "Logged out successfully" });
     navigate("/");
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center space-x-2">
-          <Store className="h-6 w-6 text-primary" />
-          <span className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Falccur Mart
-          </span>
+    <nav className="navbar">
+      <div className="navbar-container">
+        <Link to="/" className="navbar-brand">
+          <Store size={24} style={{ marginRight: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
+          <span>Falccur Mart</span>
         </Link>
 
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/cart")} className="relative">
-            <ShoppingCart className="h-5 w-5" />
-            {totalItems > 0 && (
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
-                {totalItems}
-              </Badge>
-            )}
-          </Button>
+        <div className="navbar-menu">
+          <button onClick={() => navigate("/cart")} className="cart-button">
+            <ShoppingCart size={20} />
+            {totalItems > 0 && <span className="cart-badge">{totalItems}</span>}
+          </button>
 
           {user ? (
             <>
-              <Button onClick={() => navigate("/seller/dashboard")} variant="outline">
-                <Store className="mr-2 h-4 w-4" />
+              <button onClick={() => navigate("/seller/dashboard")} className="dashboard-button">
+                <Store size={16} style={{ marginRight: '8px' }} />
                 Dashboard
-              </Button>
-              <Button onClick={handleLogout} variant="ghost" size="icon">
-                <LogOut className="h-5 w-5" />
-              </Button>
+              </button>
+              <button onClick={handleLogout} className="logout-button">
+                <LogOut size={20} />
+              </button>
             </>
           ) : (
-            <Button onClick={() => navigate("/seller/auth")} className="bg-gradient-to-r from-primary to-secondary">
-              <Store className="mr-2 h-4 w-4" />
+            <button onClick={() => navigate("/seller/auth")} className="seller-button">
+              <Store size={16} style={{ marginRight: '8px' }} />
               Become a Seller
-            </Button>
+            </button>
           )}
         </div>
       </div>
