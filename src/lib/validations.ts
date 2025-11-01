@@ -7,6 +7,7 @@ export const signUpSchema = z.object({
   shopName: z.string().trim().min(2, "Shop name must be at least 2 characters").max(100).optional(),
   phone: z.string().trim().regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number format").optional().or(z.literal("")),
   businessDescription: z.string().trim().max(500, "Description must be less than 500 characters").optional(),
+  hallNumber: z.number().int().min(1, "Hall number must be between 1 and 9").max(9, "Hall number must be between 1 and 9"),
 });
 
 export const loginSchema = z.object({

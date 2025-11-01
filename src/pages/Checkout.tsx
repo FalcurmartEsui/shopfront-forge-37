@@ -24,15 +24,28 @@ const Checkout = () => {
   });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const loadUserData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
+      
       if (session?.user) {
-        setFormData((prev) => ({
-          ...prev,
+        // Load profile data
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .single();
+
+        setFormData({
+          name: profile?.full_name || "",
           email: session.user.email || "",
-        }));
+          phone: profile?.phone || "",
+          address: profile?.address || "",
+        });
       }
-    });
+    };
+    
+    loadUserData();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,6 +84,33 @@ const Checkout = () => {
     setLoading(true);
 
     try {
+      // Save/update profile data
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (existingProfile) {
+        await supabase
+          .from("profiles")
+          .update({
+            full_name: validation.data.name,
+            phone: validation.data.phone || null,
+            address: validation.data.address,
+          })
+          .eq("user_id", user.id);
+      } else {
+        await supabase
+          .from("profiles")
+          .insert({
+            user_id: user.id,
+            full_name: validation.data.name,
+            phone: validation.data.phone || null,
+            address: validation.data.address,
+          });
+      }
+
       // Group items by seller
       const itemsBySeller = items.reduce((acc, item) => {
         if (!acc[item.seller_id]) {

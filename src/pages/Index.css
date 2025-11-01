@@ -74,10 +74,14 @@
   color: hsl(var(--muted-foreground));
 }
 
-.products-section {
+.products-container {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 4rem 1rem;
+  padding: 2rem 1rem 4rem 1rem;
+}
+
+.category-section {
+  margin-bottom: 4rem;
 }
 
 .section-header {
@@ -87,18 +91,21 @@
   align-items: center;
 }
 
-.section-title {
-  font-size: 1.875rem;
+.category-title {
+  font-size: 2rem;
   font-weight: bold;
-  margin-bottom: 0.5rem;
+  color: hsl(var(--foreground));
 }
 
 .view-all-link {
-  color: hsl(var(--accent));
+  color: hsl(var(--primary));
   text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
 }
 
 .view-all-link:hover {
+  color: hsl(var(--primary) / 0.8);
   text-decoration: underline;
 }
 

@@ -3,11 +3,16 @@ import { Navbar } from "@/components/Navbar";
 import { ProductCard } from "@/components/ProductCard";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
-import heroBanner from "@/assets/hero-banner.jpg";
+import { Link } from "react-router-dom";
 import "./Index.css";
+import heroImage from "@/assets/hero-banner.jpg";
 
 const Index = () => {
-  const [products, setProducts] = useState<any[]>([]);
+  const [newArrivals, setNewArrivals] = useState<any[]>([]);
+  const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
+  const [electronics, setElectronics] = useState<any[]>([]);
+  const [fashion, setFashion] = useState<any[]>([]);
+  const [cosmetics, setCosmetics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,32 +20,101 @@ const Index = () => {
   }, []);
 
   const loadProducts = async () => {
-    const { data } = await supabase
-      .from("products")
-      .select("*")
-      .order("created_at", { ascending: false });
+    try {
+      // Load new arrivals (last 30 days, randomized)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const { data: arrivals } = await supabase
+        .from("products")
+        .select("*")
+        .gte("created_at", thirtyDaysAgo.toISOString())
+        .limit(20);
 
-    if (data) setProducts(data);
-    setLoading(false);
+      if (arrivals) {
+        // Randomize the order
+        const shuffled = [...arrivals].sort(() => Math.random() - 0.5);
+        setNewArrivals(shuffled.slice(0, 8));
+      }
+
+      // Load featured products
+      const { data: featured } = await supabase
+        .from("products")
+        .select("*")
+        .eq("is_featured", true)
+        .limit(8);
+
+      if (featured) setFeaturedProducts(featured);
+
+      // Load by category
+      const { data: electronicsData } = await supabase
+        .from("products")
+        .select("*")
+        .eq("category", "Electronics")
+        .limit(8);
+
+      if (electronicsData) setElectronics(electronicsData);
+
+      const { data: fashionData } = await supabase
+        .from("products")
+        .select("*")
+        .eq("category", "Fashion")
+        .limit(8);
+
+      if (fashionData) setFashion(fashionData);
+
+      const { data: cosmeticsData } = await supabase
+        .from("products")
+        .select("*")
+        .eq("category", "Cosmetics")
+        .limit(8);
+
+      if (cosmeticsData) setCosmetics(cosmeticsData);
+
+      setLoading(false);
+    } catch (error) {
+      console.error("Error loading products:", error);
+      setLoading(false);
+    }
+  };
+
+  const renderCategorySection = (title: string, products: any[], categoryLink: string) => {
+    if (products.length === 0) return null;
+
+    return (
+      <section className="category-section">
+        <div className="section-header">
+          <h2 className="category-title">{title}</h2>
+          <Link to={categoryLink} className="view-all-link">
+            View All →
+          </Link>
+        </div>
+        <div className="products-grid">
+          {products.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      </section>
+    );
   };
 
   return (
-    <div className="home-page">
+    <main className="home-page">
       <div className="marquee">
         <div className="animate-marquee whitespace-nowrap">
-          Welcome to Falcur mart - The best shop to shop for all your needs
+          🎉 Welcome to Falccur Mart - Your Campus Shopping Destination! 🎉
         </div>
       </div>
 
       <Navbar />
-      
-      <section 
+
+      <section
         className="hero-section"
-        style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${heroBanner})` }}
+        style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${heroImage})` }}
       >
         <div className="hero-content">
-          <h1 className="hero-title">Welcome to Falcur mart</h1>
-          <p className="hero-subtitle">The best shop to shop for all your needs</p>
+          <h1 className="hero-title">Discover Amazing Products</h1>
+          <p className="hero-subtitle">Shop from trusted campus vendors</p>
         </div>
       </section>
 
@@ -77,31 +151,22 @@ const Index = () => {
         </div>
       </section>
 
-      <section className="products-section">
-        <div className="section-header">
-          <div>
-            <h2 className="section-title">New Arrivals</h2>
-            <a href="#" className="view-all-link">View all</a>
-          </div>
-        </div>
-
+      <div className="products-container">
         {loading ? (
           <div className="loading-state">
             <Loader2 className="loading-spinner" />
           </div>
-        ) : products.length === 0 ? (
-          <div className="empty-state">
-            <p>No products available yet</p>
-          </div>
         ) : (
-          <div className="products-grid">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          <>
+            {renderCategorySection("New Arrivals", newArrivals, "/category/new-arrivals")}
+            {renderCategorySection("Featured Products", featuredProducts, "/category/featured")}
+            {renderCategorySection("Electronics", electronics, "/category/electronics")}
+            {renderCategorySection("Fashion", fashion, "/category/fashion")}
+            {renderCategorySection("Cosmetics", cosmetics, "/category/cosmetics")}
+          </>
         )}
-      </section>
-    </div>
+      </div>
+    </main>
   );
 };
 

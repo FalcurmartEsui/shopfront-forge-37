@@ -38,6 +38,7 @@ const SellerAuth = () => {
     const shopName = formData.get("shopName") as string;
     const phone = formData.get("phone") as string;
     const businessDescription = formData.get("businessDescription") as string;
+    const hallNumber = parseInt(formData.get("hallNumber") as string);
 
     // Validate input
     const validation = signUpSchema.safeParse({
@@ -46,6 +47,7 @@ const SellerAuth = () => {
       shopName,
       phone,
       businessDescription,
+      hallNumber,
     });
 
     if (!validation.success) {
@@ -76,6 +78,7 @@ const SellerAuth = () => {
           shop_name: shopName,
           phone,
           business_description: businessDescription,
+          hall_number: hallNumber,
         });
 
         if (sellerError) throw sellerError;
@@ -233,6 +236,26 @@ const SellerAuth = () => {
                     type="tel"
                     placeholder="+234 123 456 7890"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="hallNumber">Hall Number *</Label>
+                  <select
+                    id="hallNumber"
+                    name="hallNumber"
+                    required
+                    className="w-full px-3 py-2 border border-input bg-background rounded-md"
+                  >
+                    <option value="">Select Hall</option>
+                    <option value="1">Hall 1</option>
+                    <option value="2">Hall 2</option>
+                    <option value="3">Hall 3</option>
+                    <option value="4">Hall 4</option>
+                    <option value="5">Hall 5</option>
+                    <option value="6">Hall 6</option>
+                    <option value="7">Hall 7</option>
+                    <option value="8">Hall 8</option>
+                    <option value="9">Hall 9</option>
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password *</Label>

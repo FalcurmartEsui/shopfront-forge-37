@@ -101,6 +101,38 @@ export type Database = {
         }
         Relationships: []
       }
+      product_images: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          image_url: string
+          product_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url: string
+          product_id: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_images_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string | null
@@ -108,6 +140,7 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
+          is_featured: boolean | null
           name: string
           price: number
           seller_id: string
@@ -120,6 +153,7 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          is_featured?: boolean | null
           name: string
           price: number
           seller_id: string
@@ -132,6 +166,7 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          is_featured?: boolean | null
           name?: string
           price?: number
           seller_id?: string
@@ -148,10 +183,41 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          address: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sellers: {
         Row: {
           business_description: string | null
           created_at: string
+          hall_number: number | null
           id: string
           phone: string | null
           profile_image_url: string | null
@@ -162,6 +228,7 @@ export type Database = {
         Insert: {
           business_description?: string | null
           created_at?: string
+          hall_number?: number | null
           id?: string
           phone?: string | null
           profile_image_url?: string | null
@@ -172,6 +239,7 @@ export type Database = {
         Update: {
           business_description?: string | null
           created_at?: string
+          hall_number?: number | null
           id?: string
           phone?: string | null
           profile_image_url?: string | null

@@ -7,9 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Package, Loader2, Edit, Trash2, Upload, Image as ImageIcon } from "lucide-react";
+import { Plus, Package, Loader2, Trash2, Upload, X } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { productSchema } from "@/lib/validations";
 
@@ -22,13 +23,13 @@ const SellerDashboard = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>("");
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [isFeatured, setIsFeatured] = useState(false);
 
   useEffect(() => {
     checkAuth();
     
-    // Listen for new orders
     const channel = supabase
       .channel('orders')
       .on(
@@ -39,9 +40,6 @@ const SellerDashboard = () => {
           table: 'orders'
         },
         (payload) => {
-          // Play notification sound
-          const audio = new Audio('/notification.mp3');
-          audio.play().catch(() => {});
           toast({
             title: "🎉 New Order!",
             description: "Someone just placed an order!",
@@ -108,15 +106,31 @@ const SellerDashboard = () => {
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedImage(file);
+    const files = Array.from(e.target.files || []);
+    
+    if (selectedImages.length + files.length > 10) {
+      toast({
+        title: "Too many images",
+        description: "Maximum 10 images allowed per product",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedImages([...selectedImages, ...files]);
+    
+    files.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        setImagePreviews(prev => [...prev, reader.result as string]);
       };
       reader.readAsDataURL(file);
-    }
+    });
+  };
+
+  const removeImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleAddProduct = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -129,16 +143,13 @@ const SellerDashboard = () => {
     const price = parseFloat(formData.get("price") as string);
     const category = formData.get("category") as string;
     const stockQuantity = parseInt(formData.get("stock_quantity") as string);
-    let imageUrl = formData.get("image_url") as string;
 
-    // Validate product data
     const validation = productSchema.safeParse({
       name,
       description,
       price,
       category,
       stockQuantity,
-      imageUrl: imageUrl || undefined,
     });
 
     if (!validation.success) {
@@ -153,15 +164,18 @@ const SellerDashboard = () => {
     }
 
     try {
-      // Upload image if selected
-      if (selectedImage) {
-        const fileExt = selectedImage.name.split('.').pop();
+      let mainImageUrl = "";
+
+      // Upload images
+      if (selectedImages.length > 0) {
+        const firstImage = selectedImages[0];
+        const fileExt = firstImage.name.split('.').pop();
         const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
         const filePath = `${seller.id}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('product-images')
-          .upload(filePath, selectedImage);
+          .upload(filePath, firstImage);
 
         if (uploadError) throw uploadError;
 
@@ -169,7 +183,7 @@ const SellerDashboard = () => {
           .from('product-images')
           .getPublicUrl(filePath);
 
-        imageUrl = publicUrl;
+        mainImageUrl = publicUrl;
       }
 
       const productData = {
@@ -179,12 +193,43 @@ const SellerDashboard = () => {
         price,
         category,
         stock_quantity: stockQuantity,
-        image_url: imageUrl,
+        image_url: mainImageUrl,
+        is_featured: isFeatured,
       };
 
-      const { error } = await supabase.from("products").insert(productData);
+      const { data: product, error } = await supabase
+        .from("products")
+        .insert(productData)
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Upload additional images
+      if (selectedImages.length > 1 && product) {
+        for (let i = 1; i < selectedImages.length; i++) {
+          const image = selectedImages[i];
+          const fileExt = image.name.split('.').pop();
+          const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+          const filePath = `${seller.id}/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('product-images')
+            .upload(filePath, image);
+
+          if (uploadError) continue;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('product-images')
+            .getPublicUrl(filePath);
+
+          await supabase.from("product_images").insert({
+            product_id: product.id,
+            image_url: publicUrl,
+            display_order: i,
+          });
+        }
+      }
 
       toast({
         title: "Product added successfully!",
@@ -193,8 +238,9 @@ const SellerDashboard = () => {
 
       loadProducts(seller.id);
       setDialogOpen(false);
-      setSelectedImage(null);
-      setImagePreview("");
+      setSelectedImages([]);
+      setImagePreviews([]);
+      setIsFeatured(false);
       e.currentTarget.reset();
     } catch (error: any) {
       toast({
@@ -208,6 +254,8 @@ const SellerDashboard = () => {
   };
 
   const handleDeleteProduct = async (productId: string) => {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+
     try {
       const { error } = await supabase.from("products").delete().eq("id", productId);
 
@@ -243,7 +291,7 @@ const SellerDashboard = () => {
       <div className="container py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Welcome back, {seller?.shop_name}!</h1>
-          <p className="text-muted-foreground">Manage your products and grow your business</p>
+          <p className="text-muted-foreground">Hall {seller?.hall_number} • Manage your products and grow your business</p>
         </div>
 
         <div className="grid gap-6 mb-8 md:grid-cols-3">
@@ -282,7 +330,7 @@ const SellerDashboard = () => {
                         <p className="font-semibold">{order.customer_name}</p>
                         <p className="text-sm text-muted-foreground">{order.customer_email}</p>
                       </div>
-                      <span className="font-bold text-lg">${order.total_amount}</span>
+                      <span className="font-bold text-lg">₦{order.total_amount}</span>
                     </div>
                     <p className="text-sm">{order.shipping_address}</p>
                   </div>
@@ -351,74 +399,82 @@ const SellerDashboard = () => {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="category">Category</Label>
-                      <Input
+                      <Label htmlFor="category">Category *</Label>
+                      <select
                         id="category"
                         name="category"
-                        placeholder="e.g., Fashion, Electronics"
+                        required
+                        className="w-full px-3 py-2 border border-input bg-background rounded-md"
+                      >
+                        <option value="">Select Category</option>
+                        <option value="Electronics">Electronics</option>
+                        <option value="Fashion">Fashion</option>
+                        <option value="Cosmetics">Cosmetics</option>
+                        <option value="Books">Books</option>
+                        <option value="Food">Food</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="featured"
+                        checked={isFeatured}
+                        onCheckedChange={(checked) => setIsFeatured(checked as boolean)}
                       />
+                      <Label htmlFor="featured" className="cursor-pointer">
+                        Mark as Featured Product
+                      </Label>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="image">Product Image</Label>
-                      <div className="flex flex-col gap-4">
-                        {imagePreview ? (
-                          <div className="relative w-full h-48 border rounded-lg overflow-hidden">
-                            <img 
-                              src={imagePreview} 
-                              alt="Preview" 
-                              className="w-full h-full object-cover"
-                            />
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="sm"
-                              className="absolute top-2 right-2"
-                              onClick={() => {
-                                setSelectedImage(null);
-                                setImagePreview("");
-                              }}
-                            >
-                              Remove
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary transition-colors">
-                            <Input
-                              id="image"
-                              name="image"
-                              type="file"
-                              accept="image/*"
-                              onChange={handleImageChange}
-                              className="hidden"
-                            />
-                            <label htmlFor="image" className="cursor-pointer flex flex-col items-center gap-2">
-                              <Upload className="h-8 w-8 text-muted-foreground" />
-                              <span className="text-sm text-muted-foreground">
-                                Click to upload product image
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                PNG, JPG up to 10MB
-                              </span>
-                            </label>
-                          </div>
-                        )}
-                        <div className="text-center text-sm text-muted-foreground">- OR -</div>
-                        <div className="space-y-2">
-                          <Label htmlFor="image_url">Enter Image URL</Label>
-                          <Input
-                            id="image_url"
-                            name="image_url"
-                            type="url"
-                            placeholder="https://example.com/image.jpg"
-                            disabled={!!selectedImage}
-                          />
+                      <Label>Product Images (Max 10)</Label>
+                      {imagePreviews.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2">
+                          {imagePreviews.map((preview, index) => (
+                            <div key={index} className="relative">
+                              <img
+                                src={preview}
+                                alt={`Preview ${index + 1}`}
+                                className="w-full h-24 object-cover rounded border"
+                              />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute -top-2 -right-2 h-6 w-6"
+                                onClick={() => removeImage(index)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
                         </div>
+                      )}
+                      <div className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary transition-colors">
+                        <Input
+                          id="images"
+                          name="images"
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleImageChange}
+                          className="hidden"
+                          disabled={selectedImages.length >= 10}
+                        />
+                        <label htmlFor="images" className="cursor-pointer flex flex-col items-center gap-2">
+                          <Upload className="h-8 w-8 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
+                            Click to upload images ({selectedImages.length}/10)
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Upload from gallery, file manager, or camera
+                          </span>
+                        </label>
                       </div>
                     </div>
                     <Button
                       type="submit"
                       className="w-full bg-gradient-to-r from-primary to-secondary"
-                      disabled={submitting}
+                      disabled={submitting || selectedImages.length === 0}
                     >
                       {submitting ? (
                         <>
@@ -450,6 +506,7 @@ const SellerDashboard = () => {
                       <TableHead>Category</TableHead>
                       <TableHead>Price</TableHead>
                       <TableHead>Stock</TableHead>
+                      <TableHead>Featured</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -460,6 +517,7 @@ const SellerDashboard = () => {
                         <TableCell>{product.category || "—"}</TableCell>
                         <TableCell>₦{product.price.toLocaleString()}</TableCell>
                         <TableCell>{product.stock_quantity}</TableCell>
+                        <TableCell>{product.is_featured ? "⭐ Yes" : "No"}</TableCell>
                         <TableCell className="text-right">
                           <Button
                             variant="ghost"
